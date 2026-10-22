@@ -14,7 +14,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="stylesheet" href="style.css?v=67fed4fb6b">
+<link rel="stylesheet" href="style.css?v=7a03d51643">
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -34,6 +34,14 @@
     <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14"/><rect x="14" y="5" width="4" height="14"/></svg>
   </button>
   <div id="joy-base"><div id="joy-knob"></div></div>
+  <button id="btn-act" class="act-btn" aria-label="Attack / mine (hold)">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 3.2l6.3 6.3-1.9 1.9-1.1-1.1-6.6 6.6 1.4 1.4-1.7 1.7-1.4-1.4-3.3 3.3-2.2-2.2 3.3-3.3-1.4-1.4 1.7-1.7 1.4 1.4 6.6-6.6-1.1-1.1z"/></svg>
+    <span>Attack</span>
+  </button>
+  <button id="btn-use" class="act-btn" aria-label="Use / place block">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l8.5 4.7v9.6L12 21.5l-8.5-4.7V7.2zm0 2.3L6.3 8 12 11.2 17.7 8zM5.5 9.7v6l5.5 3.1v-6zm13 0l-5.5 3.1v6l5.5-3.1z"/></svg>
+    <span>Use</span>
+  </button>
   <button id="btn-jump" aria-label="Jump">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4l8 9h-5v7H9v-7H4z"/></svg>
   </button>
@@ -74,11 +82,33 @@
     <div class="logo"><span class="l1">BLOCK</span><span class="l2">LANDS</span></div>
     <div class="tagline">A tiny voxel world in your pocket</div>
     <button id="btn-play" class="btn primary">Play</button>
-    <button id="btn-new" class="btn">New World</button>
     <button id="btn-help" class="btn">How to play</button>
     <button id="btn-install" class="btn hidden">Install app</button>
-    <div class="ver">v0.1.0</div>
+    <div class="ver">v0.2.0</div>
   </div>
+</div>
+
+<div id="worlds" class="screen hidden">
+  <div class="panel worlds-panel">
+    <h2>Select World</h2>
+    <div id="world-list" class="world-list"></div>
+    <div class="row">
+      <button id="btn-create" class="btn primary">Create New World</button>
+      <button id="worlds-back" class="btn">Back</button>
+    </div>
+  </div>
+</div>
+
+<div id="create" class="screen hidden">
+  <form id="create-form" class="panel create-panel" autocomplete="off">
+    <h2>New World</h2>
+    <label>World name<input id="create-name" type="text" maxlength="32" placeholder="World 1" enterkeyhint="next"></label>
+    <label>Seed <small>(optional: a number or any text; empty = random)</small><input id="create-seed" type="text" maxlength="40" placeholder="Random" enterkeyhint="go" inputmode="text"></label>
+    <div class="row">
+      <button id="create-go" class="btn primary" type="submit">Create &amp; Play</button>
+      <button id="create-cancel" class="btn" type="button">Cancel</button>
+    </div>
+  </form>
 </div>
 
 <div id="help" class="screen hidden">
@@ -92,6 +122,8 @@
           <li><b>Right thumb</b>: drag to look</li>
           <li><b>Hold</b> still on the right to mine</li>
           <li><b>Tap</b> on the right to place a block</li>
+          <li><b>Attack</b> button: hold to mine or fight</li>
+          <li><b>Use</b> button: place a block</li>
           <li><b>&#9650;</b> jumps &middot; hold it to swim up</li>
         </ul>
       </div>
@@ -121,13 +153,14 @@
 <div id="pause" class="screen hidden">
   <div class="panel pause-panel">
     <h2>Paused</h2>
+    <div id="pause-world" class="sub"></div>
     <div class="settings">
       <label>Render distance <output id="out-rd"></output><input id="set-rd" type="range" min="2" max="8" step="1"></label>
       <label>Resolution <select id="set-res"><option value="0">Low (fast)</option><option value="1">Medium</option><option value="2">High (sharp)</option></select></label>
       <label>Look sensitivity <output id="out-sens"></output><input id="set-sens" type="range" min="0.4" max="2.4" step="0.1"></label>
       <label>Music <output id="out-music"></output><input id="set-music" type="range" min="0" max="1" step="0.05"></label>
       <label>Sound effects <output id="out-sfx"></output><input id="set-sfx" type="range" min="0" max="1" step="0.05"></label>
-      <label class="check"><input id="set-aj" type="checkbox"> Auto-jump</label>
+      <label class="check"><input id="set-aj" type="checkbox"> Auto-jump &amp; climb out of water</label>
       <label class="check"><input id="set-debug" type="checkbox"> Show debug info</label>
     </div>
     <div class="row">
@@ -147,6 +180,6 @@
 
 <div id="fatal" class="screen hidden"><div class="panel"><h2 id="fatal-title">Something went wrong</h2><p id="fatal-msg"></p></div></div>
 <noscript><div class="screen"><div class="panel"><h2>Blocklands needs JavaScript</h2></div></div></noscript>
-<script src="game.js?v=67fed4fb6b" defer></script>
+<script src="game.js?v=7a03d51643" defer></script>
 </body>
 </html>
