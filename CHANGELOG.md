@@ -11,6 +11,8 @@ All notable changes to Blocklands are documented here. The project follows [Sema
   - The extra blocks skip water, saplings, logs and planks (those are axe work); dirt, grass, sand, stone, cobblestone and leaves come along.
   - With the maths switch on, only the aimed block can ask a question: neighbours come along only if they are the currently unlocked type, so a hammer cannot get around the questions.
   - New hammer sprites and recipe-book entries; the help screen and README mention hammers.
+- **The app updates itself.** It checks for a new version when it opens, when you come back to it after leaving, and once an hour, and reloads into the new version as soon as it takes over, instead of making you open it twice. It never reloads in the middle of a game: an update that arrives while you play waits until you are back on the title screen or leave the app (the world is saved first), and it also waits while the create-world form is open. A reload guard (never twice within 15 seconds) rules out reload loops, and being offline is simply ignored.
+- The version number on the title screen is larger, bold and brighter.
 
 ## [0.4.0] - 2026-10-21
 
