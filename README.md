@@ -74,7 +74,8 @@ In the inventory a tap picks a stack up / puts it down; a long-press (or right c
 Or let GitHub build it: push this source repo and enable *Settings -> Pages -> Source: GitHub Actions*;
 `.github/workflows/pages.yml` runs the tests, builds and publishes `deploy/`.
 
-Updating: every build changes the service-worker cache name, so installed apps pick up the new version on the next launch.
+Updating: every build changes the service-worker cache name. The app checks for a new version when it opens, when you return to it and hourly,
+and reloads into it by itself (on the title screen, or when you leave the app, never mid-game), so players do not have to open it twice.
 
 ## Develop
 
