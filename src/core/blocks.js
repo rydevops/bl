@@ -27,6 +27,13 @@ export const B = Object.freeze({
   SAPLING_DARK: 18,
   SAPLING_MAPLE: 19,
   TNT: 20, // only ever exists as a primed (lit) entity, never as a world block or inventory item
+  TALL_GRASS: 21,
+  FARMLAND: 22,        // tilled dirt, dry
+  FARMLAND_MOIST: 23,  // tilled dirt with water within 4 blocks (darker, grows crops faster)
+  WHEAT_1: 24,         // wheat growth stages 1 (seedling) .. 4 (ripe)
+  WHEAT_2: 25,
+  WHEAT_3: 26,
+  WHEAT_4: 27,
 });
 // Note: B.LOG / B.LEAVES (6, 7) are the spruce tree, the original tree of v0.1 worlds.
 
@@ -40,6 +47,11 @@ export const I = Object.freeze({
   APPLE: 105,
   WOODEN_HAMMER: 106,
   STONE_HAMMER: 107,
+  WOODEN_HOE: 108,
+  STONE_HOE: 109,
+  WHEAT_SEEDS: 110,
+  WHEAT: 111,
+  BREAD: 112,
 });
 
 /** Texture atlas tile indices (8 x 8 grid of 16px tiles). */
@@ -55,6 +67,11 @@ export const TILE = Object.freeze({
   LEAVES: 8,
   PLANKS: 9,
   COBBLE: 10,
+  TALL_GRASS: 11,
+  FARMLAND_DRY: 12,
+  FARMLAND_MOIST: 13,
+  WHEAT_1: 14,
+  WHEAT_2: 15,
   STICK: 16,
   WOODEN_PICKAXE: 17,
   WOODEN_AXE: 18,
@@ -72,6 +89,13 @@ export const TILE = Object.freeze({
   WOODEN_HAMMER: 30,
   STONE_HAMMER: 31,
   CRACK0: 32, // 10 consecutive crack stages
+  WHEAT_3: 42,
+  WHEAT_4: 43,
+  WHEAT_SEEDS: 44,
+  WHEAT: 45,
+  BREAD: 46,
+  WOODEN_HOE: 47,
+  STONE_HOE: 55,
   SAPLING_SPRUCE: 48,
   SAPLING_OAK: 49,
   SAPLING_DARK: 50,
@@ -175,6 +199,28 @@ export const BLOCKS = {
     tiles: { top: TILE.PLANKS, side: TILE.PLANKS, bottom: TILE.PLANKS },
     hardness: 2, tool: 'axe', sound: 'wood', drop: B.PLANKS,
   }),
+  [B.TALL_GRASS]: block({
+    name: 'Tall Grass',
+    solid: false, opaque: false, plant: true, wear: false,
+    tiles: { top: TILE.TALL_GRASS, side: TILE.TALL_GRASS, bottom: TILE.TALL_GRASS },
+    hardness: 0.05, sound: 'grass', drop: null, // loot table in mining.js (wheat seeds)
+  }),
+  [B.FARMLAND]: block({
+    name: 'Farmland',
+    tiles: { top: TILE.FARMLAND_DRY, side: TILE.DIRT, bottom: TILE.DIRT },
+    hardness: 0.6, sound: 'grass', drop: B.DIRT,
+  }),
+  [B.FARMLAND_MOIST]: block({
+    name: 'Moist Farmland',
+    tiles: { top: TILE.FARMLAND_MOIST, side: TILE.DIRT, bottom: TILE.DIRT },
+    hardness: 0.6, sound: 'grass', drop: B.DIRT,
+  }),
+  ...Object.fromEntries([B.WHEAT_1, B.WHEAT_2, B.WHEAT_3, B.WHEAT_4].map((id, i) => [id, block({
+    name: i === 3 ? 'Ripe Wheat' : 'Wheat',
+    solid: false, opaque: false, plant: true, wear: false,
+    tiles: { top: TILE[`WHEAT_${i + 1}`], side: TILE[`WHEAT_${i + 1}`], bottom: TILE[`WHEAT_${i + 1}`] },
+    hardness: 0.05, sound: 'grass', drop: null, // loot table in mining.js
+  })])),
   [B.COBBLE]: block({
     name: 'Cobblestone',
     tiles: { top: TILE.COBBLE, side: TILE.COBBLE, bottom: TILE.COBBLE },
@@ -204,6 +250,11 @@ export const ITEMS = {
   [I.WOODEN_PICKAXE]: { name: 'Wooden Pickaxe', tile: TILE.WOODEN_PICKAXE, stack: 1, tool: { type: 'pickaxe', material: 'wood', ...TOOL_TIERS.wood } },
   [I.WOODEN_AXE]: { name: 'Wooden Axe', tile: TILE.WOODEN_AXE, stack: 1, tool: { type: 'axe', material: 'wood', ...TOOL_TIERS.wood } },
   [I.STONE_PICKAXE]: { name: 'Stone Pickaxe', tile: TILE.STONE_PICKAXE, stack: 1, tool: { type: 'pickaxe', material: 'stone', ...TOOL_TIERS.stone } },
+  [I.WOODEN_HOE]: { name: 'Wooden Hoe', tile: TILE.WOODEN_HOE, stack: 1, tool: { type: 'hoe', material: 'wood', ...TOOL_TIERS.wood } },
+  [I.STONE_HOE]: { name: 'Stone Hoe', tile: TILE.STONE_HOE, stack: 1, tool: { type: 'hoe', material: 'stone', ...TOOL_TIERS.stone } },
+  [I.WHEAT_SEEDS]: { name: 'Wheat Seeds', tile: TILE.WHEAT_SEEDS, stack: 64, seed: B.WHEAT_1 },
+  [I.WHEAT]: { name: 'Wheat', tile: TILE.WHEAT, stack: 64 },
+  [I.BREAD]: { name: 'Bread', tile: TILE.BREAD, stack: 64, food: { hunger: 10, saturation: 12 } },
   [I.STONE_AXE]: { name: 'Stone Axe', tile: TILE.STONE_AXE, stack: 1, tool: { type: 'axe', material: 'stone', ...TOOL_TIERS.stone } },
   [I.WOODEN_HAMMER]: { name: 'Wooden Hammer', tile: TILE.WOODEN_HAMMER, stack: 1, tool: hammer('wood') },
   [I.STONE_HAMMER]: { name: 'Stone Hammer', tile: TILE.STONE_HAMMER, stack: 1, tool: hammer('stone') },

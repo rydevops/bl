@@ -2,6 +2,23 @@
 
 All notable changes to Blocklands are documented here. The project follows [Semantic Versioning](https://semver.org/).
 
+## [0.6.0] - 2026-10-22
+
+### Added
+- **Farming.**
+  - **Tall grass** grows on grass in every world (existing worlds too, wherever the land is still untouched). It sways in the wind, breaks instantly without wearing your tool, and has a 15% chance of dropping **wheat seeds**.
+  - **Wooden Hoe and Stone Hoe** (two planks or cobblestone over two sticks). **Use** a hoe on dirt or grass to till it into **farmland**; a tuft of tall grass on top is cleared, and aiming at a tuft tills the soil under it. Each use costs one durability. Only dirt and grass with room above can be tilled.
+  - **Moist farmland.** Farmland within **4 blocks of water** (a square around it, water up to 2 blocks below or 1 above) is darker and *moist*; any other farmland is dry. Moisture is rechecked while crops grow, so digging a channel soaks the field.
+  - **Wheat.** **Use** wheat seeds on farmland to plant them. Wheat has four stages (seedling to ripe golden ears), 20-40 s per stage (random), only while you are within render distance. On moist farmland it grows at full speed, on dry farmland at 40% speed. Crops are saved with the world.
+  - **Harvest:** an unripe plant gives its seed back; ripe wheat gives 1 wheat and 1-2 seeds. Breaking farmland gives dirt and pops the crop off it.
+  - **Bread:** three wheat in a row. Eating it restores 5 drumsticks of hunger (10 points) and 12 saturation, more than an apple (2 drumsticks, 6 saturation), and works with the existing eat flow (refused when your hunger is full).
+  - Blocks (and saplings) placed while aiming at a tuft of tall grass replace it.
+- **Animation.** The top layer of water swells in slow waves, leaves sway, and plants (tall grass, saplings, wheat) bend in the wind, strongest at their tips. It runs in the vertex shader from a per-vertex weight, so there is no per-frame mesh work, neighbouring blocks and chunks move together (nothing tears), and plain terrain stays perfectly still.
+- **Landscape on mobile.** Touch devices ask the browser to lock to landscape (Android honours it in fullscreen or when installed; the manifest already says landscape). Where that is not possible (iOS), a portrait screen shows a "Turn your device sideways" card and the game pauses behind it.
+
+### Changed
+- The mesher's vertex layout gained a seventh float (the sway weight).
+
 ## [0.5.0] - 2026-10-22
 
 ### Added

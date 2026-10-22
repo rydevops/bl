@@ -2,7 +2,7 @@
 import { B, I, itemName, LOG_IDS, isLog } from './blocks.js';
 import { makeStack } from './inventory.js';
 
-const P = B.PLANKS, S = I.STICK, C = B.COBBLE;
+const P = B.PLANKS, S = I.STICK, C = B.COBBLE, W = I.WHEAT;
 
 // B.LOG in a recipe means "any log": spruce, oak, maple and darkwood all craft into the same planks.
 const canon = (id) => (isLog(id) ? B.LOG : id);
@@ -20,6 +20,9 @@ export const RECIPES = [
   { id: 'stone_axe', shape: ['CC', 'CS', ' S'], key: { C, S }, out: { id: I.STONE_AXE, n: 1 } },
   { id: 'wooden_hammer', shape: ['PPP', 'PSP', ' S '], key: { P, S }, out: { id: I.WOODEN_HAMMER, n: 1 } },
   { id: 'stone_hammer', shape: ['CCC', 'CSC', ' S '], key: { C, S }, out: { id: I.STONE_HAMMER, n: 1 } },
+  { id: 'wooden_hoe', shape: ['PP', ' S', ' S'], key: { P, S }, out: { id: I.WOODEN_HOE, n: 1 } },
+  { id: 'stone_hoe', shape: ['CC', ' S', ' S'], key: { C, S }, out: { id: I.STONE_HOE, n: 1 } },
+  { id: 'bread', shape: ['WWW'], key: { W }, out: { id: I.BREAD, n: 1 } },
 ];
 
 /** Pre-compute each recipe's trimmed pattern (rows of ids, 0 = empty). */

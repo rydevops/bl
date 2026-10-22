@@ -1,8 +1,10 @@
 // Chunk meshing: culled faces, per-vertex ambient occlusion, a cheap skylight term, water pass.
-// Pure JS (no GL) so it can be unit tested. Vertex layout: x, y, z, u, v, light (6 floats).
+// Pure JS (no GL) so it can be unit tested. Vertex layout: x, y, z, u, v, light, sway (7 floats).
+// `sway` is an animation weight the shader uses (0 = static): leaves 0.4, plants 0 at the foot to 1 at the tip, water surface 1.
 import { B, CHUNK, HEIGHT, BLOCKS, ATLAS_COLS, isOpaque, isLeaves } from './blocks.js';
 
-export const VERTEX_FLOATS = 6;
+export const VERTEX_FLOATS = 7;
+export const LEAF_SWAY = 0.4; // leaves move less than the tips of plants (weight 1)
 const TILE_UV = 1 / ATLAS_COLS;
 const EPS = 0.0004;
 const AO_LEVELS = [0.5, 0.68, 0.84, 1.0];
@@ -22,10 +24,10 @@ const CORNERS = [[0, 0], [1, 0], [1, 1], [0, 1]];
 
 export class MeshBuilder {
   constructor() { this.v = []; this.i = []; this.count = 0; }
-  /** corners: 4 x [x,y,z,u,v,light] */
+  /** corners: 4 x [x,y,z,u,v,light(,sway)] */
   quad(c, flip = false) {
     const base = this.count;
-    for (let k = 0; k < 4; k++) { const p = c[k]; this.v.push(p[0], p[1], p[2], p[3], p[4], p[5]); }
+    for (let k = 0; k < 4; k++) { const p = c[k]; this.v.push(p[0], p[1], p[2], p[3], p[4], p[5], p[6] || 0); }
     this.count += 4;
     if (flip) this.i.push(base + 1, base + 2, base + 3, base + 1, base + 3, base);
     else this.i.push(base, base + 1, base + 2, base, base + 2, base + 3);
@@ -105,9 +107,10 @@ export function meshChunk(world, chunk) {
               const px = x + f.o[0] + ou * f.u[0] + ov * f.v[0];
               let py = y + f.o[1] + ou * f.u[1] + ov * f.v[1];
               const pz = z + f.o[2] + ou * f.u[2] + ov * f.v[2];
-              if (!waterAbove && py - y > 0.999) py = y + WATER_TOP;
+              const surface = !waterAbove && py - y > 0.999; // the top layer: its corners ride the waves
+              if (surface) py = y + WATER_TOP;
               const [u, v] = uvOf(tile, ou, ov);
-              corners.push([px, py, pz, u, v, light]);
+              corners.push([px, py, pz, u, v, light, surface ? 1 : 0]);
             }
             water.quad(corners, false);
             continue;
@@ -124,7 +127,7 @@ export function meshChunk(world, chunk) {
             const py = y + f.o[1] + ou * f.u[1] + ov * f.v[1];
             const pz = z + f.o[2] + ou * f.u[2] + ov * f.v[2];
             const [u, v] = uvOf(tile, ou, ov);
-            corners.push([px, py, pz, u, v, f.shade * sky * AO_LEVELS[ao[k]]]);
+            corners.push([px, py, pz, u, v, f.shade * sky * AO_LEVELS[ao[k]], isLeaf ? LEAF_SWAY : 0]);
           }
           opaque.quad(corners, ao[0] + ao[2] < ao[1] + ao[3]);
         }
@@ -193,7 +196,7 @@ export function addCross(b, tile, x, y, z, light = 1) {
         const [ou, ov] = CORNERS[k];
         const t = side === 1 ? ou : 1 - ou;
         const [u, v] = uvOf(tile, t, ov);
-        corners.push([ax + (bx - ax) * t, y + ov, az + (bz - az) * t, u, v, light]);
+        corners.push([ax + (bx - ax) * t, y + ov, az + (bz - az) * t, u, v, light, ov]); // tips sway, the foot stays put
       }
       b.quad(corners, false);
     }

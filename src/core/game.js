@@ -8,6 +8,7 @@ import { raycast, lookDir } from './raycast.js';
 import { Inventory, makeStack, HOTBAR_SIZE } from './inventory.js';
 import { CraftGrid, RECIPES } from './crafting.js';
 import { breakTime, dropsFor, toolWear, areaOf, areaCells, areaBreaks } from './mining.js';
+import { isFarmland, isCrop, isRipe, nextStage, canTill, roomAbove, isMoist, farmlandFor, stageSeconds, DRY_GROWTH_RATE } from './farming.js';
 import { Vitals, JUMP_EFFORT } from './survival.js';
 import { makeQuestion, isCorrect } from './math.js';
 import { findFloatingTrees, FallingTree } from './trees.js';
@@ -50,6 +51,7 @@ export class Game {
     this._mathArmed = true; // a new question only opens on a fresh press of Attack
     this.tnt = [];          // primed TNT: {x, y, z, t}
     this.saplings = new Map(); // 'x,y,z' -> {x, y, z, t}: seconds of nearby growing time left
+    this.crops = new Map();    // 'x,y,z' -> {x, y, z, t}: unripe wheat; seconds until its next stage (at full speed)
     this._spawnPoint = opts.spawn || null;
     this.settings = { autoJump: true, math: false }; // math: ask a question before mining a block type you have not unlocked
     this.inventory = new Inventory();
@@ -76,7 +78,7 @@ export class Game {
     const save = opts.save && opts.save.v === SAVE_VERSION ? opts.save : null;
     this.seed = save ? save.seed : (opts.seed ?? DEFAULT_SEED);
     this.gen = save ? (save.gen || 1) : WORLD_GEN;
-    this.world = opts.world || new World(this.seed, { legacyTrees: this.gen < 2 });
+    this.world = opts.world || new World(this.seed, { legacyTrees: this.gen < 2, grass: true }) // tall grass grows in every world: it only fills open grass the player never touched;
     this.player = new PlayerBody();
     if (save) this._restore(save);
     else this._spawn(opts.spawn);
@@ -132,6 +134,9 @@ export class Game {
     for (const sp of save.saplings || []) {
       if (Array.isArray(sp) && sp.length >= 4) this.saplings.set(sKey(sp[0], sp[1], sp[2]), { x: sp[0], y: sp[1], z: sp[2], t: sp[3] });
     }
+    for (const c of save.crops || []) {
+      if (Array.isArray(c) && c.length >= 4) this.crops.set(sKey(c[0], c[1], c[2]), { x: c[0], y: c[1], z: c[2], t: c[3] });
+    }
     if (save.settings) Object.assign(this.settings, save.settings);
     this.world.generateAround(Math.floor(this.player.x) >> 4, Math.floor(this.player.z) >> 4, 1);
     for (const it of save.items || []) {
@@ -154,6 +159,7 @@ export class Game {
       tnt: this.tnt.map((t) => [t.x, t.y, t.z, +t.t.toFixed(2)]),
       death: this.deathSpot,
       saplings: [...this.saplings.values()].map((s) => [s.x, s.y, s.z, +s.t.toFixed(1)]),
+      crops: [...this.crops.values()].map((c) => [c.x, c.y, c.z, +c.t.toFixed(1)]),
       settings: this.settings,
       edits: this.world.serializeEdits(),
       items: this.items.filter((i) => !i.dead).slice(0, 150).map((i) => [i.stack.id, i.stack.n, i.stack.d || 0, +i.x.toFixed(2), +i.y.toFixed(2), +i.z.toFixed(2)]),
@@ -239,6 +245,7 @@ export class Game {
     this.swing = Math.max(0, this.swing - dt * 4);
 
     this._updateSaplings(dt);
+    this._updateCrops(dt);
     this._updateTnt(dt);
     this._updateEntities(dt);
   }
@@ -399,23 +406,25 @@ export class Game {
     const drops = dropsFor(id, heldId, this.rng);
     w.setBlock(x, y, z, B.AIR);
     if (isSapling(id)) this.saplings.delete(sKey(x, y, z));
+    if (isCrop(id)) this.crops.delete(sKey(x, y, z));
     this.emit({ type: 'break', x, y, z, id });
     spawnBreakParticles(this.particles, x, y, z, BLOCKS[id].tiles.side, 12);
     for (const d of drops) this.spawnDrop(d.id, d.n, x + 0.5, y + 0.2, z + 0.5);
     this._popPlantAbove(x, y, z);
 
-    // tool wear
-    const wear = toolWear(id, heldId);
-    if (wear && held) {
-      held.d = (held.d || 0) + wear;
-      const tool = toolOf(held.id);
-      if (held.d >= tool.durability) {
-        this.inventory.set(this.selected, null);
-        this.emit({ type: 'tool-break', id: held.id });
-      }
-    }
+    this._wearHeld(held, toolWear(id, heldId));
     this.checkCollapse(x, y, z);
     return true;
+  }
+
+  /** Use up `wear` of the held tool's durability; the tool breaks when it runs out. */
+  _wearHeld(held, wear) {
+    if (!wear || !held) return;
+    held.d = (held.d || 0) + wear;
+    if (held.d >= toolOf(held.id).durability) {
+      this.inventory.set(this.selected, null);
+      this.emit({ type: 'tool-break', id: held.id });
+    }
   }
 
   /** A plant whose soil was just removed pops off as an item. */
@@ -424,7 +433,8 @@ export class Game {
     if (!BLOCKS[above] || !BLOCKS[above].plant) return;
     this.world.setBlock(x, y + 1, z, B.AIR);
     this.saplings.delete(sKey(x, y + 1, z));
-    this.spawnDrop(BLOCKS[above].drop, 1, x + 0.5, y + 1.2, z + 0.5);
+    this.crops.delete(sKey(x, y + 1, z));
+    for (const d of dropsFor(above, 0, this.rng)) this.spawnDrop(d.id, d.n, x + 0.5, y + 1.2, z + 0.5);
     spawnBreakParticles(this.particles, x, y + 1, z, BLOCKS[above].tiles.side, 6);
   }
 
@@ -470,11 +480,83 @@ export class Game {
     this.fallingTrees.length = 0;
   }
 
-  /** The Use action: eat the held food, otherwise place the held block / sapling. */
+  /** The Use action: eat the held food, till with a hoe, plant seeds, otherwise place the held block / sapling. */
   useItem() {
     const held = this.heldStack();
     if (held && foodOf(held.id)) return this.eat();
+    if (held && (toolOf(held.id) || {}).type === 'hoe') return this.till();
+    if (held && (itemInfo(held.id) || {}).seed) return this.plantSeed();
     return this.placeBlock();
+  }
+
+  // ------------------------------------------------------------- farming
+  /** Hoe the targeted dirt or grass into farmland (moist when water is within 4 blocks). Clears tall grass growing on top. */
+  till() {
+    if (this._placeCooldown > 0 || this.vitals.dead) return false;
+    const t = this.target, held = this.heldStack(), w = this.world;
+    if (!t || !held || (toolOf(held.id) || {}).type !== 'hoe') return false;
+    // Aiming at a tuft of tall grass means the soil under it.
+    const x = t.x, y = t.id === B.TALL_GRASS ? t.y - 1 : t.y, z = t.z;
+    const soil = w.getBlock(x, y, z), above = w.getBlock(x, y + 1, z);
+    if (!canTill(soil) || !roomAbove(above)) {
+      if (this._msgTimer <= 0) { this.emit({ type: 'not-tillable', id: soil }); this._msgTimer = 2; }
+      return false;
+    }
+    if (above === B.TALL_GRASS) w.setBlock(x, y + 1, z, B.AIR);
+    w.setBlock(x, y, z, farmlandFor(isMoist((bx, by, bz) => w.getBlock(bx, by, bz), x, y, z)));
+    this._wearHeld(held, 1);
+    this._placeCooldown = PLACE_COOLDOWN;
+    this.swing = 1;
+    this.emit({ type: 'till', x, y, z, id: B.DIRT });
+    return true;
+  }
+
+  /** Plant the held seeds on farmland (the cell above must be empty). */
+  plantSeed() {
+    if (this._placeCooldown > 0 || this.vitals.dead) return false;
+    const t = this.target, held = this.heldStack();
+    const info = held && itemInfo(held.id);
+    if (!t || !info || !info.seed) return false;
+    const { px, py, pz } = t;
+    if (py < 1 || py >= HEIGHT || this.world.getBlock(px, py, pz) !== B.AIR) return false;
+    if (!isFarmland(this.world.getBlock(px, py - 1, pz))) {
+      if (this._msgTimer <= 0) { this.emit({ type: 'need-farmland' }); this._msgTimer = 2; }
+      return false;
+    }
+    if (!this.world.setBlock(px, py, pz, info.seed)) return false;
+    this.inventory.decrement(this.selected, 1);
+    this.crops.set(sKey(px, py, pz), { x: px, y: py, z: pz, t: stageSeconds(this.rng()) });
+    this._placeCooldown = PLACE_COOLDOWN;
+    this.swing = 1;
+    this.emit({ type: 'place', x: px, y: py, z: pz, id: info.seed });
+    return true;
+  }
+
+  /**
+   * Wheat grows stage by stage while it is loaded and near the player (like saplings). Moist farmland grows it at full speed,
+   * dry farmland at DRY_GROWTH_RATE. The farmland's moist/dry look is refreshed here too.
+   */
+  _updateCrops(dt) {
+    if (!this.crops.size) return;
+    const p = this.player, w = this.world;
+    const range = this.renderDistance * 16;
+    for (const [k, c] of this.crops) {
+      if (!w.isLoaded(c.x, c.z)) continue;
+      const id = w.getBlock(c.x, c.y, c.z);
+      if (!isCrop(id) || isRipe(id)) { this.crops.delete(k); continue; }
+      if (Math.hypot(c.x + 0.5 - p.x, c.z + 0.5 - p.z) > range) continue; // too far: time stands still
+      const soil = w.getBlock(c.x, c.y - 1, c.z);
+      if (!isFarmland(soil)) { this.crops.delete(k); continue; } // (breaking the soil already popped the crop)
+      const moist = isMoist((x, y, z) => w.getBlock(x, y, z), c.x, c.y - 1, c.z);
+      if (soil !== farmlandFor(moist)) w.setBlock(c.x, c.y - 1, c.z, farmlandFor(moist));
+      c.t -= dt * (moist ? 1 : DRY_GROWTH_RATE);
+      if (c.t > 0) continue;
+      const next = nextStage(id);
+      w.setBlock(c.x, c.y, c.z, next);
+      this.emit({ type: 'crop-grow', x: c.x, y: c.y, z: c.z, id: next, ripe: isRipe(next) });
+      if (isRipe(next)) this.crops.delete(k);
+      else c.t = stageSeconds(this.rng());
+    }
   }
 
   placeBlock() {
@@ -483,19 +565,21 @@ export class Game {
     if (!t || !held) return false;
     const info = itemInfo(held.id);
     if (!info || !info.block) return false;
-    const { px, py, pz } = t;
+    // Aiming at a tuft of tall grass puts the block where the tuft is (it gets replaced), not beside it.
+    const onTuft = t.id === B.TALL_GRASS;
+    const px = onTuft ? t.x : t.px, py = onTuft ? t.y : t.py, pz = onTuft ? t.z : t.pz;
     if (py < 0 || py >= HEIGHT) return false;
     const cell = this.world.getBlock(px, py, pz);
     const plant = !!BLOCKS[info.block].plant;
     if (plant) {
       // Saplings take root in dirt only (not grass, sand or stone), in an empty cell.
-      if (cell !== B.AIR) return false;
+      if (cell !== B.AIR && cell !== B.TALL_GRASS) return false;
       if (this.world.getBlock(px, py - 1, pz) !== B.DIRT) {
         if (this._msgTimer <= 0) { this.emit({ type: 'bad-soil' }); this._msgTimer = 2; }
         return false;
       }
     } else {
-      if (cell !== B.AIR && cell !== B.WATER) return false;
+      if (cell !== B.AIR && cell !== B.WATER && cell !== B.TALL_GRASS) return false;
       if (BLOCKS[info.block].solid && this.player.overlapsCell(px, py, pz)) return false;
     }
     if (!this.world.setBlock(px, py, pz, info.block)) return false;

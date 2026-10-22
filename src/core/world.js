@@ -38,12 +38,12 @@ export class Chunk {
 export class World {
   /**
    * @param {number} seed
-   * @param {{generate?: (cx:number,cz:number)=>Uint8Array, legacyTrees?: boolean}} [opts] custom generator (tests / superflat);
-   *   legacyTrees keeps v0.1/v0.2 worlds all-spruce
+   * @param {{generate?: (cx:number,cz:number)=>Uint8Array, legacyTrees?: boolean, grass?: boolean}} [opts] custom generator (tests / superflat);
+   *   legacyTrees keeps v0.1/v0.2 worlds all-spruce; grass adds tall grass (new worlds)
    */
   constructor(seed, opts = {}) {
     this.seed = seed | 0;
-    this.terrain = createTerrain(this.seed, { legacyTrees: !!opts.legacyTrees });
+    this.terrain = createTerrain(this.seed, { legacyTrees: !!opts.legacyTrees, grass: !!opts.grass });
     this.generate = opts.generate || ((cx, cz) => generateChunkData(this.terrain, cx, cz));
     this.chunks = new Map();
     this.edits = new Map(); // chunkKey -> Map(index -> blockId)

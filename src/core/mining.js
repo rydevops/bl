@@ -1,5 +1,6 @@
 // Mining rules: how long a block takes, whether it drops, and tool wear.
-import { BLOCKS, I, toolOf, speciesOfLeaves, isLiquid } from './blocks.js';
+import { B, BLOCKS, I, toolOf, speciesOfLeaves, isLiquid } from './blocks.js';
+import { cropStage, isRipe } from './farming.js';
 
 /** Can the held item (0 / null = bare hand) harvest the block's drop? */
 export function canHarvest(blockId, heldId) {
@@ -29,12 +30,20 @@ export function dropFor(blockId, heldId) {
 
 export const LEAF_SAPLING_CHANCE = 0.10; // chance a broken leaf block drops its tree's sapling
 export const LEAF_LOOT_CHANCE = 0.15;    // chance it also drops one apple or stick (50/50)
+export const GRASS_SEED_CHANCE = 0.15;   // chance a tuft of tall grass drops wheat seeds
+export const RIPE_BONUS_SEED_CHANCE = 0.5; // a ripe wheat plant gives 1 wheat and 1 seed, +1 more seed this often
 
 /**
  * Everything the block drops: an array of {id, n}. Leaves never drop themselves; they roll the loot table.
+ * Tall grass sometimes drops wheat seeds; wheat drops seeds, and wheat too once ripe.
  * @param {() => number} [rng] injectable for tests
  */
 export function dropsFor(blockId, heldId, rng = Math.random) {
+  if (blockId === B.TALL_GRASS) return rng() < GRASS_SEED_CHANCE ? [{ id: I.WHEAT_SEEDS, n: 1 }] : [];
+  if (cropStage(blockId)) {
+    if (!isRipe(blockId)) return [{ id: I.WHEAT_SEEDS, n: 1 }]; // pulled up early: only the seed comes back
+    return [{ id: I.WHEAT, n: 1 }, { id: I.WHEAT_SEEDS, n: rng() < RIPE_BONUS_SEED_CHANCE ? 2 : 1 }];
+  }
   const sp = speciesOfLeaves(blockId);
   if (sp) {
     const out = [];
@@ -49,7 +58,7 @@ export function dropsFor(blockId, heldId, rng = Math.random) {
 /** Wear (in uses) the held tool takes for breaking this block. */
 export function toolWear(blockId, heldId) {
   const b = BLOCKS[blockId];
-  return toolOf(heldId) && b && b.hardness > 0 ? 1 : 0;
+  return toolOf(heldId) && b && b.hardness > 0 && b.wear !== false ? 1 : 0;
 }
 
 /** Radius of the square a held tool breaks around the aimed block (hammers: 1 => 3x3), 0 for everything else. */
