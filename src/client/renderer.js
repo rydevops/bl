@@ -6,11 +6,23 @@ import { chunkKey } from '../core/world.js';
 const STRIDE = VERTEX_FLOATS * 4;
 
 const VS = `
-attribute vec3 aPos; attribute vec2 aUV; attribute float aLight;
-uniform mat4 uVP; uniform mat4 uModel;
+attribute vec3 aPos; attribute vec2 aUV; attribute float aLight; attribute float aSway;
+uniform mat4 uVP; uniform mat4 uModel; uniform float uTime; uniform float uMode; uniform vec2 uWorld;
 varying vec2 vUV; varying float vLight; varying float vDist;
 void main() {
-  vec4 wp = uModel * vec4(aPos, 1.0);
+  vec3 p = aPos;
+  if (aSway > 0.0) {
+    vec2 w = aPos.xz + uWorld;   // world position: neighbouring blocks and chunks move together, so nothing tears
+    if (uMode > 0.5 && uMode < 1.5) {   // top layer of the water: a slow swell
+      p.y += aSway * 0.025 * (sin(w.x * 1.1 + uTime * 1.5) + sin(w.y * 0.9 + uTime * 1.2 + 1.3));
+    } else {                            // leaves and plants: wind, strongest at the tips
+      float ph = uTime * 1.7 + w.x * 0.8 + w.y * 0.6;
+      float gust = 0.6 + 0.4 * sin(uTime * 0.37 + w.x * 0.11);
+      p.x += aSway * 0.09 * gust * sin(ph);
+      p.z += aSway * 0.07 * gust * sin(ph * 0.8 + 1.9);
+    }
+  }
+  vec4 wp = uModel * vec4(p, 1.0);
   gl_Position = uVP * wp;
   vUV = aUV; vLight = aLight; vDist = length(wp.xyz);
 }`;
@@ -109,7 +121,7 @@ export class Renderer {
   _init() {
     const gl = this.gl;
     this.uint32 = !!gl.getExtension('OES_element_index_uint');
-    this.main = this._program(VS, FS, ['aPos', 'aUV', 'aLight'], ['uVP', 'uModel', 'uTex', 'uSun', 'uFog', 'uFogNear', 'uFogFar', 'uMode', 'uTime', 'uAlpha']);
+    this.main = this._program(VS, FS, ['aPos', 'aUV', 'aLight', 'aSway'], ['uVP', 'uModel', 'uTex', 'uSun', 'uFog', 'uFogNear', 'uFogFar', 'uMode', 'uTime', 'uAlpha', 'uWorld']);
     this.flat = this._program(FLAT_VS, FLAT_FS, ['aPos'], ['uVP', 'uColor', 'uPoint']);
     this.tex = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, this.tex);
@@ -280,7 +292,7 @@ export class Renderer {
     gl.uniform1f(P.u.uTime, f.time);
     gl.uniform1f(P.u.uAlpha, 1);
     gl.uniform1f(P.u.uMode, 0);
-    gl.enableVertexAttribArray(0); gl.enableVertexAttribArray(1); gl.enableVertexAttribArray(2);
+    gl.enableVertexAttribArray(0); gl.enableVertexAttribArray(1); gl.enableVertexAttribArray(2); gl.enableVertexAttribArray(3);
     gl.disable(gl.BLEND);
     gl.enable(gl.CULL_FACE);
     gl.cullFace(gl.BACK);
@@ -295,6 +307,7 @@ export class Renderer {
     for (const [m, ox, oy, oz] of visible) {
       if (!m.opaque) continue;
       gl.uniformMatrix4fv(P.u.uModel, false, translation(ox, oy, oz));
+      gl.uniform2f(P.u.uWorld, m.cx * CHUNK, m.cz * CHUNK);
       this._drawStatic(m.opaque);
       tris += m.opaque.count / 3;
     }
@@ -333,6 +346,7 @@ export class Renderer {
     for (const [m, ox, oy, oz] of visible) {
       if (!m.water) continue;
       gl.uniformMatrix4fv(P.u.uModel, false, translation(ox, oy, oz));
+      gl.uniform2f(P.u.uWorld, m.cx * CHUNK, m.cz * CHUNK);
       this._drawStatic(m.water);
       tris += m.water.count / 3;
     }
@@ -357,6 +371,7 @@ export class Renderer {
     gl.vertexAttribPointer(0, 3, gl.FLOAT, false, STRIDE, 0);
     gl.vertexAttribPointer(1, 2, gl.FLOAT, false, STRIDE, 12);
     gl.vertexAttribPointer(2, 1, gl.FLOAT, false, STRIDE, 20);
+    gl.vertexAttribPointer(3, 1, gl.FLOAT, false, STRIDE, 24);
   }
 
   _drawStatic(m) {
@@ -452,7 +467,7 @@ export class Renderer {
     ]);
     const F = this.flat;
     gl.useProgram(F.p);
-    gl.disableVertexAttribArray(1); gl.disableVertexAttribArray(2);
+    gl.disableVertexAttribArray(1); gl.disableVertexAttribArray(2); gl.disableVertexAttribArray(3);
     gl.uniformMatrix4fv(F.u.uVP, false, vp);
     gl.uniform4f(F.u.uColor, 0, 0, 0, 0.75);
     gl.enable(gl.BLEND);
@@ -465,7 +480,7 @@ export class Renderer {
     gl.drawArrays(gl.LINES, 0, 24);
     gl.depthMask(true);
     gl.disable(gl.BLEND);
-    gl.enableVertexAttribArray(1); gl.enableVertexAttribArray(2);
+    gl.enableVertexAttribArray(1); gl.enableVertexAttribArray(2); gl.enableVertexAttribArray(3);
     gl.useProgram(this.main.p);
   }
 
@@ -473,7 +488,7 @@ export class Renderer {
     const gl = this.gl;
     const F = this.flat;
     gl.useProgram(F.p);
-    gl.disableVertexAttribArray(1); gl.disableVertexAttribArray(2);
+    gl.disableVertexAttribArray(1); gl.disableVertexAttribArray(2); gl.disableVertexAttribArray(3);
     gl.uniformMatrix4fv(F.u.uVP, false, vp);
     gl.disable(gl.DEPTH_TEST);
     gl.disable(gl.CULL_FACE);
@@ -519,7 +534,7 @@ export class Renderer {
     gl.disable(gl.BLEND);
     gl.enable(gl.DEPTH_TEST);
     gl.enable(gl.CULL_FACE);
-    gl.enableVertexAttribArray(1); gl.enableVertexAttribArray(2);
+    gl.enableVertexAttribArray(1); gl.enableVertexAttribArray(2); gl.enableVertexAttribArray(3);
     gl.useProgram(this.main.p);
   }
 

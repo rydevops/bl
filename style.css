@@ -159,6 +159,14 @@ body.touch #hotbar { bottom: calc(6px + var(--sab)); }
   .hint { display: none; }
   .btn { padding: 8px 14px; }
 }
+/* touch devices play in landscape: a portrait screen shows only a "turn your device" card (the game pauses behind it) */
+#rotate { display: none; position: fixed; inset: 0; z-index: 100; flex-direction: column; align-items: center; justify-content: center; gap: 14px; background: #0d1119; text-align: center; padding: 24px; touch-action: none; }
+@media (orientation: portrait) { body.touch #rotate { display: flex; } }
+.rot-phone { width: 46px; height: 78px; border: 4px solid var(--ink); border-radius: 8px; position: relative; animation: rot-turn 2.4s ease-in-out infinite; }
+.rot-phone::after { content: ''; position: absolute; left: 50%; bottom: 5px; width: 12px; height: 3px; margin-left: -6px; background: var(--ink); border-radius: 2px; }
+.rot-text { font-size: 20px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--gold); }
+.rot-sub { font-size: 13px; color: var(--dim); }
+@keyframes rot-turn { 0%, 15% { transform: rotate(0deg); } 55%, 100% { transform: rotate(-90deg); } }
 @media (orientation: portrait) {
   .inv-body { flex-direction: column; gap: 6px; }
   .recipes { max-height: 22vh; width: 100%; }

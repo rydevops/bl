@@ -333,6 +333,112 @@ function drawApple() {
   });
 }
 
+/** Free-standing plants are drawn without the dark outline items get: a pixel map from a painter callback, with a little tone jitter. */
+function bare(draw) {
+  const px = new Array(T * T).fill(null);
+  draw((x, y, c) => { x = Math.floor(x); y = Math.floor(y); if (x >= 0 && x < T && y >= 0 && y < T) px[y * T + x] = c; });
+  const r = mulberry32(31337);
+  return px.map((c) => (c ? shade(c, (r() - 0.5) * 16) : c));
+}
+
+/** A tuft of tall grass: tapering blades of three greens, darker at the root, leaning a little. */
+function drawTallGrass() {
+  const r = mulberry32(4242);
+  const GREEN = [[44, 104, 34, 255], [76, 148, 46, 255], [118, 184, 70, 255]];
+  return bare((set) => {
+    for (let x = 0; x < 16; x++) {
+      if (r() < 0.1) continue;
+      const height = 5 + Math.floor(r() * 9), lean = (r() - 0.5) * 0.7, tone = r() < 0.3 ? 0 : r() < 0.6 ? 1 : 2;
+      for (let k = 0; k < height; k++) {
+        const c = k < 2 ? GREEN[0] : k > height - 3 ? GREEN[Math.min(2, tone + 1)] : GREEN[tone];
+        const bx = x + Math.round(lean * k);
+        set(bx, 15 - k, c);
+        if (k < height * 0.45) set(bx + 1, 15 - k, GREEN[tone === 2 ? 1 : tone]); // blades are two pixels wide at the base
+      }
+    }
+  });
+}
+
+/** Tilled soil seen from above: dirt with furrows. Moist soil is darker and glossier. */
+function farmland(a, tile, moist) {
+  const r = rngFor(tile);
+  const base = moist ? [74, 50, 36] : [134, 98, 66];
+  const groove = moist ? [46, 31, 23] : [98, 68, 44];
+  const ridge = moist ? [96, 68, 50] : [156, 118, 84];
+  a.each(tile, (x, y) => {
+    const row = y % 4;
+    const c = row === 1 ? groove : row === 2 ? ridge : base;
+    return shade(c, (r() - 0.5) * 8 + (r() < 0.04 ? -14 : 0));
+  });
+}
+
+/** Wheat in its four growth stages (1 = seedlings .. 4 = ripe golden ears). */
+function drawWheat(stage) {
+  const r = mulberry32(900 + stage);
+  const HEIGHT_OF = [0, 4, 8, 12, 14][stage];
+  const STALK = [null, [78, 160, 52, 255], [96, 164, 54, 255], [150, 166, 56, 255], [196, 160, 62, 255]][stage];
+  const EAR = [[222, 182, 70, 255], [176, 132, 42, 255]];
+  return bare((set) => {
+    for (const base of [0, 2, 4, 6, 8, 10, 12, 14]) {
+      const bx = Math.min(14, base + (r() < 0.5 ? 0 : 1));
+      const hgt = Math.max(2, HEIGHT_OF - Math.floor(r() * 5));
+      for (let k = 0; k < hgt; k++) set(bx, 15 - k, k < 2 ? [STALK[0] - 30, STALK[1] - 30, STALK[2] - 10, 255] : STALK);
+      if (stage >= 3) { // ears: a plump head, two pixels wide
+        const top = 15 - hgt, len = stage === 4 ? 4 : 2;
+        const c = stage === 4 ? EAR : [[160, 176, 62, 255], [118, 144, 48, 255]];
+        for (let k = 0; k < len; k++) { set(bx, top - k, c[k % 2]); set(bx + 1, top - k + (k % 2), c[(k + 1) % 2]); }
+        if (stage === 4) set(bx, top - len, EAR[0]);
+      }
+    }
+  });
+}
+
+function drawWheatSeeds() {
+  const SEED = [[96, 120, 40, 255], [138, 166, 58, 255], [66, 86, 28, 255]];
+  return sprite((set) => {
+    for (const [x, y, k] of [[5, 10, 0], [8, 9, 1], [10, 11, 0], [6, 12, 2], [9, 13, 1], [4, 13, 1], [11, 8, 2], [7, 7, 0]]) {
+      set(x, y, SEED[k]); set(x + 1, y, SEED[(k + 1) % 3]);
+    }
+  });
+}
+
+/** A sheaf of golden stalks bound with a string. */
+function drawWheatItem() {
+  const GOLD = [[236, 200, 88, 255], [206, 164, 56, 255], [160, 118, 36, 255]];
+  return sprite((set) => {
+    for (const [x0, y0, x1, y1] of [[3, 14, 7, 3], [6, 14, 9, 2], [9, 14, 11.5, 3.5]]) {
+      line(set, x0, y0, x1, y1, GOLD[1], GOLD[2]);
+      for (let k = 0; k < 5; k++) { set(x1 - 0.5 + (k % 2), y1 + 1 - k * 0.5 - 1, GOLD[k % 2]); }
+      set(x1, y1 - 1, GOLD[0]); set(x1, y1 - 2, GOLD[0]);
+    }
+    for (let x = 5; x <= 11; x++) set(x, 11, [120, 84, 44, 255]); // the band
+  });
+}
+
+function drawBread() {
+  const CRUST = [[142, 84, 34, 255], [190, 122, 52, 255], [226, 168, 88, 255]];
+  return sprite((set) => {
+    filled(set, 8, 9.4, 6.4, 4.4, (x, y, dx, dy) => (dy < -0.35 ? CRUST[2] : dy > 0.5 || dx > 0.7 ? CRUST[0] : CRUST[1]));
+    for (const x of [5, 8, 11]) { set(x, 7, CRUST[0]); set(x + 1, 8, CRUST[0]); } // scored top
+    set(6, 6, [244, 206, 130, 255]); set(9, 6, [244, 206, 130, 255]);
+  });
+}
+
+/** Handle with a short crossbar at the top and a blade hanging off its far end. */
+function drawHoe(pal) {
+  return sprite((set) => {
+    line(set, 1.6, 14.4, H[0] + 0.2, H[1] - 0.2, HANDLE.main, HANDLE.dark);
+    for (let v = -5.2; v <= 1.0; v += 0.2) for (let u = 0.9; u <= 2.3; u += 0.2) {
+      const [x, y] = toXY(u, v);
+      set(x, y, u > 1.9 ? pal.light : u < 1.2 ? pal.dark : pal.main);
+    }
+    for (let v = -5.2; v <= -3.6; v += 0.2) for (let u = -2.6; u <= 0.9; u += 0.2) {
+      const [x, y] = toXY(u, v);
+      set(x, y, v < -4.7 ? pal.light : u < -1.7 ? pal.dark : pal.main);
+    }
+  });
+}
+
 function putSprite(a, tile, px) {
   for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) a.put(tile, x, y, px[y * T + x] || [0, 0, 0, 0]);
 }
@@ -402,6 +508,15 @@ export function paintAtlas() {
   putSprite(a, TILE.STONE_AXE, drawAxe(HEAD_STONE));
   putSprite(a, TILE.WOODEN_HAMMER, drawHammer(HEAD_WOOD));
   putSprite(a, TILE.STONE_HAMMER, drawHammer(HEAD_STONE));
+  putSprite(a, TILE.TALL_GRASS, drawTallGrass());
+  farmland(a, TILE.FARMLAND_DRY, false);
+  farmland(a, TILE.FARMLAND_MOIST, true);
+  for (let s = 1; s <= 4; s++) putSprite(a, TILE[`WHEAT_${s}`], drawWheat(s));
+  putSprite(a, TILE.WHEAT_SEEDS, drawWheatSeeds());
+  putSprite(a, TILE.WHEAT, drawWheatItem());
+  putSprite(a, TILE.BREAD, drawBread());
+  putSprite(a, TILE.WOODEN_HOE, drawHoe(HEAD_WOOD));
+  putSprite(a, TILE.STONE_HOE, drawHoe(HEAD_STONE));
   cracks(a);
   cached = { width: ATLAS_SIZE, height: ATLAS_SIZE, data: a.data };
   return cached;

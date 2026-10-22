@@ -214,10 +214,29 @@ function beginLoading() {
   try {
     if (!isTouch()) S.input.lockMouse();
     else if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
-      document.documentElement.requestFullscreen({ navigationUI: 'hide' }).catch(() => {});
+      document.documentElement.requestFullscreen({ navigationUI: 'hide' }).then(lockLandscape, () => {});
     }
-    if (screen.orientation && screen.orientation.lock && isTouch()) screen.orientation.lock('landscape').catch(() => {});
+    lockLandscape();
   } catch (e) { /* optional niceties */ }
+}
+
+/** Ask the browser to keep the screen landscape (Android honours it in fullscreen / installed; iOS ignores it, see watchOrientation). */
+function lockLandscape() {
+  try {
+    if (screen.orientation && screen.orientation.lock && isTouch()) screen.orientation.lock('landscape').catch(() => {});
+  } catch (e) { /* not supported */ }
+}
+
+/** Touch devices in portrait: the page shows a "turn your device" card (CSS); keep the game paused behind it. */
+function watchOrientation() {
+  if (!window.matchMedia) return;
+  const portrait = matchMedia('(orientation: portrait)');
+  const check = () => {
+    if (isTouch() && portrait.matches && S.state === 'playing') pause();
+    if (!portrait.matches) lockLandscape();
+  };
+  if (portrait.addEventListener) portrait.addEventListener('change', check); else if (portrait.addListener) portrait.addListener(check);
+  window.addEventListener('resize', check);
 }
 
 function startPlaying() {
@@ -450,6 +469,10 @@ function handleEvents(game) {
       case 'not-hungry': a.deny(); S.ui.toast("You're not hungry", 1400); break;
       case 'sprint-blocked': a.deny(); S.ui.toast('Too hungry to sprint: eat something', 2200); break;
       case 'bad-soil': a.deny(); S.ui.toast('Saplings only take root in dirt', 2200); break;
+      case 'need-farmland': a.deny(); S.ui.toast('Seeds need tilled soil: use a hoe on dirt or grass', 2400); break;
+      case 'not-tillable': a.deny(); S.ui.toast('A hoe only works on dirt and grass with room above', 2400); break;
+      case 'till': a.forBlock(e.id, 'place', { x: e.x + 0.5, y: e.y + 0.5, z: e.z + 0.5 }); dirty = true; S.saveDirty = true; break;
+      case 'crop-grow': dirty = true; S.saveDirty = true; if (e.ripe) a.grow({ x: e.x + 0.5, y: e.y + 0.5, z: e.z + 0.5 }); break;
       case 'tree-grow': a.grow({ x: e.x + 0.5, y: e.y + 1, z: e.z + 0.5 }); S.saveDirty = true; break;
       case 'tree-fall': a.treeFall({ x: e.x, y: e.y, z: e.z }); break;
       case 'tree-land': a.treeLand({ x: e.x, y: e.y, z: e.z }); S.ui.toast('Timber! Collect the logs'); break;
@@ -616,7 +639,7 @@ function boot() {
         S.ui.refresh(); S.ui.announceHeld();
       },
       mouseLockLost: () => { if (S.state === 'playing') pause(); },
-      firstTouch: () => { document.body.classList.add('touch'); S.audio.unlock(); },
+      firstTouch: () => { document.body.classList.add('touch'); S.audio.unlock(); lockLandscape(); },
     },
   });
 
@@ -653,6 +676,7 @@ function boot() {
     $('btn-install').classList.remove('hidden');
   });
   bindSettings();
+  watchOrientation();
 
   // lifecycle
   window.addEventListener('resize', resize);

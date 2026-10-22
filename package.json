@@ -1,6 +1,6 @@
 {
   "name": "blocklands",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Blocklands - a voxel sandbox PWA for mobile, deployable to GitHub Pages.",
   "private": true,
   "type": "module",

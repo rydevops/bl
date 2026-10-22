@@ -31,16 +31,19 @@ export function trunkHeight(species, roll) {
 
 /**
  * @param {number} seed
- * @param {{legacyTrees?: boolean}} [opts] legacyTrees: every tree is a spruce (worlds created before v0.3 keep their look).
+ * @param {{legacyTrees?: boolean, grass?: boolean}} [opts] legacyTrees: every tree is a spruce (worlds created before v0.3 keep their look).
+ *   grass: scatter tall grass on grass blocks (the game turns it on for every world; tests of the bare terrain leave it off).
  */
 export function createTerrain(seed, opts = {}) {
   const legacyTrees = !!opts.legacyTrees;
+  const grass = !!opts.grass;
   const nSpecies = createNoise2D(seed ^ 0x6666);
   const nCont = createNoise2D(seed ^ 0x1111);
   const nHill = createNoise2D(seed ^ 0x2222);
   const nRiver = createNoise2D(seed ^ 0x3333);
   const nWarp = createNoise2D(seed ^ 0x4444);
   const nForest = createNoise2D(seed ^ 0x5555);
+  const nGrass = createNoise2D(seed ^ 0x7777);
 
   /** Distance-like value to the nearest river centre line (0 = on the river). */
   function riverValue(x, z) {
@@ -71,6 +74,14 @@ export function createTerrain(seed, opts = {}) {
     return 0.1 + 0.62 * smoothstep(-0.1, 0.4, f);
   }
 
+  /** Is there a tuft of tall grass on top of the grass block at (x, z)? Patchy: meadows are thick, forest floors and hilltops thin. */
+  function hasTallGrass(x, z) {
+    if (!grass) return false;
+    const meadow = fbm(nGrass, x / 18, z / 18, 2);
+    const density = 0.03 + 0.5 * smoothstep(-0.1, 0.45, meadow);
+    return hash2(x, z, seed + 31) < density;
+  }
+
   /** The (at most one) tree whose jittered cell index is (cx, cz). */
   function treeInCell(cellX, cellZ) {
     const r = hash2(cellX, cellZ, seed + 7);
@@ -89,7 +100,7 @@ export function createTerrain(seed, opts = {}) {
     return { x: px, z: pz, gy: col.h, trunk: trunkHeight(species, hash2(cellX, cellZ, seed + 17)), species };
   }
 
-  return { seed, legacyTrees, column, riverValue, forestDensity, treeInCell };
+  return { seed, legacyTrees, grass, column, riverValue, forestDensity, treeInCell, hasTallGrass };
 }
 
 /** All [x, y, z, blockId] of a tree (world coordinates). Leaves never replace logs. `tree.species` indexes SPECIES (default spruce). */
@@ -130,6 +141,7 @@ export function generateChunkData(terrain, cx, cz) {
         data[(y * CHUNK + lz) * CHUNK + lx] = id;
       }
       for (let y = h + 1; y <= SEA_LEVEL; y++) data[(y * CHUNK + lz) * CHUNK + lx] = B.WATER;
+      if (surface === B.GRASS && h + 1 < HEIGHT && terrain.hasTallGrass(wx, wz)) data[((h + 1) * CHUNK + lz) * CHUNK + lx] = B.TALL_GRASS;
     }
   }
 
