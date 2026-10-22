@@ -9,10 +9,21 @@ import { Renderer } from './renderer.js';
 import { Input } from './input.js';
 import { AudioEngine } from './audio.js';
 import { UI } from './ui.js';
+import { registerWithUpdates } from './updates.js';
 import { loadSettings, saveSettings, listWorlds, getWorld, createWorld, loadWorld, saveWorld, touchWorld, deleteWorld, parseSeed } from './storage.js';
 
 /* global __VERSION__ */
 const VERSION = typeof __VERSION__ !== 'undefined' ? __VERSION__ : 'dev';
+let updater = null; // set once the service worker is registered
+
+/** When we last reloaded for an update, kept in sessionStorage so it survives the reload (private mode: no guard, no harm). */
+function reloadGuard() {
+  const key = 'blocklands-update-reload';
+  return {
+    get: () => { try { return +sessionStorage.getItem(key) || 0; } catch (e) { return 0; } },
+    set: (t) => { try { sessionStorage.setItem(key, String(t)); } catch (e) { /* ignored */ } },
+  };
+}
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 
@@ -91,6 +102,7 @@ function applySettings() {
 // --------------------------------------------------------------- game flow
 function enterTitle() {
   S.state = 'title';
+  if (updater) setTimeout(() => updater.tryReload(), 0); // an update that arrived mid-game applies now
   S.worldId = null;
   S.input.reset();
   S.input.unlockMouse();
@@ -157,6 +169,7 @@ function showWorlds() {
     list.appendChild(row);
   });
   S.state = 'title';
+  if (updater) setTimeout(() => updater.tryReload(), 0); // e.g. leaving the create-world form
   show('worlds');
 }
 
@@ -650,7 +663,11 @@ function boot() {
       if (S.worldId && (S.state === 'playing' || S.state === 'inventory' || S.state === 'paused' || S.state === 'dead' || S.state === 'math')) save();
       if (S.state === 'playing') pause();
       S.audio.suspend();
-    } else if (S.state !== 'paused') S.audio.resume();
+      if (updater) updater.tryReload(true); // saved above; an update that arrived mid-game applies while the app is in the background
+    } else {
+      if (S.state !== 'paused') S.audio.resume();
+      if (updater) updater.checkNow();
+    }
   });
   window.addEventListener('pagehide', () => { if (S.worldId && (S.state === 'playing' || S.state === 'inventory' || S.state === 'paused' || S.state === 'dead' || S.state === 'math')) save(); });
   window.addEventListener('error', (e) => { if (S.state === 'boot') fatal('Failed to start', e.error || e.message); });
@@ -671,7 +688,13 @@ function boot() {
   requestAnimationFrame(frame);
 
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
-    navigator.serviceWorker.register('sw.js').catch((e) => console.warn('service worker not registered', e));
+    updater = registerWithUpdates({
+      sw: navigator.serviceWorker,
+      canReloadNow: () => S.state === 'fatal' || (S.state === 'title' && $('create').classList.contains('hidden')), // not while a world name is being typed
+      reload: () => location.reload(),
+      loopGuard: reloadGuard(),
+      onError: (e) => console.warn('service worker not registered', e),
+    });
   }
 }
 
