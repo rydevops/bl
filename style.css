@@ -37,7 +37,7 @@ canvas#game { position: fixed; inset: 0; width: 100%; height: 100%; display: blo
 #mine-bar.on { opacity: 1; }
 #mine-bar i { display: block; height: 100%; width: 0; background: var(--gold); }
 
-#toast { position: absolute; left: 50%; bottom: calc(var(--s) + 32px + var(--sab)); transform: translateX(-50%); max-width: 80vw; text-align: center; padding: 4px 12px; border-radius: 6px; background: rgba(12, 16, 24, 0.62); font-size: 14px; font-weight: 700; letter-spacing: 0.03em; opacity: 0; transition: opacity 0.25s; white-space: pre-line; }
+#toast { position: absolute; left: 50%; bottom: calc(var(--s) + 56px + var(--sab)); transform: translateX(-50%); max-width: 80vw; text-align: center; padding: 4px 12px; border-radius: 6px; background: rgba(12, 16, 24, 0.62); font-size: 14px; font-weight: 700; letter-spacing: 0.03em; opacity: 0; transition: opacity 0.25s; white-space: pre-line; }
 #toast.on { opacity: 1; }
 #debug { position: absolute; left: calc(8px + var(--sal)); top: calc(6px + var(--sat)); font-size: 11px; line-height: 1.35; text-shadow: 1px 1px 0 #000; white-space: pre; }
 
@@ -185,3 +185,34 @@ body.touch #hotbar { bottom: calc(6px + var(--sab)); }
 input[type=text] { font: inherit; font-size: 16px; color: var(--ink); background: #151b27; border: 2px solid; border-color: var(--panel-lo) var(--panel-hi) var(--panel-hi) var(--panel-lo); padding: 9px 10px; width: 100%; -webkit-user-select: text; user-select: text; touch-action: manipulation; border-radius: 0; }
 input[type=text]:focus { outline: 2px solid var(--gold); outline-offset: 0; }
 .sub { color: var(--dim); font-size: 11px; margin: -2px 0 8px; letter-spacing: 0.04em; }
+
+/* ------------------------------------------------- health / hunger */
+:root { --ic: clamp(11px, calc(var(--s) * 0.4), 19px); }
+#stats { position: absolute; left: 50%; bottom: calc(var(--s) + 20px + var(--sab)); transform: translateX(-50%); width: calc(var(--s) * 9 + 36px); display: flex; justify-content: space-between; align-items: flex-end; pointer-events: none; }
+body.touch #stats { bottom: calc(var(--s) + 18px + var(--sab)); }
+.bar-row { display: flex; gap: 1px; }
+.food-col { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.bar-row i { display: block; width: var(--ic); height: var(--ic); background-size: 100% 100%; image-rendering: pixelated; flex: none; }
+#food { flex-direction: row-reverse; } /* drumsticks empty from the left, like hearts from the right */
+#hearts i[data-s="full"] { background-image: var(--ic-heart-full); }
+#hearts i[data-s="half"] { background-image: var(--ic-heart-half); }
+#hearts i[data-s="empty"] { background-image: var(--ic-heart-empty); }
+#food i[data-s="full"] { background-image: var(--ic-food-full); }
+#food i[data-s="half"] { background-image: var(--ic-food-half); }
+#food i[data-s="empty"] { background-image: var(--ic-food-empty); }
+#hearts.low i { animation: throb 0.7s ease-in-out infinite; }
+#hearts.low i:nth-child(odd) { animation-delay: 0.12s; }
+#food.starving i { animation: throb 1s ease-in-out infinite; }
+@keyframes throb { 50% { transform: translateY(-2px); } }
+#sat { width: calc(var(--ic) * 10 + 9px); height: 4px; background: rgba(0, 0, 0, 0.55); border: 1px solid rgba(255, 255, 255, 0.28); }
+#sat i { display: block; height: 100%; width: 0; background: linear-gradient(#ffe27a, #e8a21a); }
+#hurt { position: fixed; inset: 0; z-index: 4; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at center, rgba(180, 0, 0, 0.15) 30%, rgba(190, 10, 10, 0.78) 100%); }
+#hurt.on { animation: hurt 0.45s ease-out; }
+@keyframes hurt { 0% { opacity: 1; } 100% { opacity: 0; } }
+body.dead #hurt { opacity: 0.45; animation: none; background: radial-gradient(ellipse at center, rgba(120, 0, 0, 0.45) 20%, rgba(80, 0, 0, 0.9) 100%); }
+#dead { background: rgba(60, 0, 0, 0.35); }
+.dead-panel { width: min(380px, 94vw); text-align: center; }
+.dead-panel h2 { font-size: 26px; color: #ff6a5a; }
+.dead-panel .cause { margin: 4px 0 2px; font-size: 14px; }
+.dead-panel .sub { margin: 0 0 12px; }
+#joy-base.sprint #joy-knob { background: rgba(255, 170, 60, 0.7); border-color: #ffd28a; }

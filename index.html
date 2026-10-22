@@ -14,11 +14,12 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="stylesheet" href="style.css?v=7a03d51643">
+<link rel="stylesheet" href="style.css?v=0cacf1353e">
 </head>
 <body>
 <canvas id="game"></canvas>
 <div id="underwater"></div>
+<div id="hurt"></div>
 <div id="touch-layer"></div>
 
 <div id="hud" class="hidden">
@@ -26,6 +27,13 @@
   <div id="mine-bar"><i></i></div>
   <div id="toast"></div>
   <div id="debug"></div>
+  <div id="stats">
+    <div id="hearts" class="bar-row" aria-label="Health"></div>
+    <div class="food-col">
+      <div id="food" class="bar-row" aria-label="Hunger"></div>
+      <div id="sat" title="Saturation"><i></i></div>
+    </div>
+  </div>
   <div id="hotbar"></div>
   <button id="btn-inv" class="hud-btn" aria-label="Open inventory">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3h8v2h2a2 2 0 0 1 2 2v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a2 2 0 0 1 2-2h2V3zm2 2h4V5h-4zM8 12v2h8v-2z"/></svg>
@@ -84,7 +92,7 @@
     <button id="btn-play" class="btn primary">Play</button>
     <button id="btn-help" class="btn">How to play</button>
     <button id="btn-install" class="btn hidden">Install app</button>
-    <div class="ver">v0.2.0</div>
+    <div class="ver">v0.3.0</div>
   </div>
 </div>
 
@@ -125,12 +133,13 @@
           <li><b>Attack</b> button: hold to mine or fight</li>
           <li><b>Use</b> button: place a block</li>
           <li><b>&#9650;</b> jumps &middot; hold it to swim up</li>
+          <li>Push the joystick <b>past its ring</b> to sprint</li>
         </ul>
       </div>
       <div>
         <h3>Keyboard &amp; mouse</h3>
         <ul>
-          <li><b>WASD</b> move &middot; <b>Space</b> jump</li>
+          <li><b>WASD</b> move &middot; <b>Space</b> jump &middot; <b>Shift</b> sprint</li>
           <li><b>Mouse</b> look &middot; <b>Left</b> mine &middot; <b>Right</b> place</li>
           <li><b>1-9</b> or wheel: hotbar</li>
           <li><b>E</b> inventory &middot; <b>Esc</b> pause</li>
@@ -143,10 +152,24 @@
           <li>Pick up the drops, open the <b>backpack</b></li>
           <li>Craft <b>planks</b>, <b>sticks</b>, then a <b>pickaxe</b> and <b>axe</b></li>
           <li>Stone needs a pickaxe to drop cobblestone</li>
+          <li>Break <b>leaves</b> for apples, sticks and <b>saplings</b>; plant a sapling in <b>dirt</b> and it grows into a tree while you are nearby</li>
+          <li>Eat apples with <b>Use</b>. Hunger drops as you work; sprinting needs 3 full drumsticks. Starving hurts, and if you die you drop everything</li>
         </ul>
       </div>
     </div>
     <button id="help-close" class="btn primary">Got it</button>
+  </div>
+</div>
+
+<div id="dead" class="screen hidden">
+  <div class="panel dead-panel">
+    <h2>You died!</h2>
+    <p id="dead-cause" class="cause"></p>
+    <p id="dead-where" class="sub"></p>
+    <div class="row">
+      <button id="btn-respawn" class="btn primary">Respawn</button>
+      <button id="btn-dead-quit" class="btn">Save &amp; quit</button>
+    </div>
   </div>
 </div>
 
@@ -180,6 +203,6 @@
 
 <div id="fatal" class="screen hidden"><div class="panel"><h2 id="fatal-title">Something went wrong</h2><p id="fatal-msg"></p></div></div>
 <noscript><div class="screen"><div class="panel"><h2>Blocklands needs JavaScript</h2></div></div></noscript>
-<script src="game.js?v=7a03d51643" defer></script>
+<script src="game.js?v=0cacf1353e" defer></script>
 </body>
 </html>
