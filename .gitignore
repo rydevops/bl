@@ -1,0 +1,4 @@
+node_modules/
+dist/
+# deploy/ is the build output you upload to GitHub Pages; commit it only if you publish from the branch.
+.DS_Store
