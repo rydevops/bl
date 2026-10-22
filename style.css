@@ -216,3 +216,26 @@ body.dead #hurt { opacity: 0.45; animation: none; background: radial-gradient(el
 .dead-panel .cause { margin: 4px 0 2px; font-size: 14px; }
 .dead-panel .sub { margin: 0 0 12px; }
 #joy-base.sprint #joy-knob { background: rgba(255, 170, 60, 0.7); border-color: #ffd28a; }
+
+/* ------------------------------------------------------------ maths */
+#math { background: rgba(8, 12, 22, 0.55); }
+.math-panel { display: flex; gap: 14px; align-items: stretch; width: min(560px, 96vw); }
+.math-left { flex: 1; display: flex; flex-direction: column; gap: 6px; justify-content: space-between; min-width: 0; }
+.math-for { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--dim); letter-spacing: 0.06em; text-transform: uppercase; }
+.math-for img { width: 28px; height: 28px; image-rendering: pixelated; }
+.math-q { font-size: clamp(30px, 9vh, 52px); font-weight: 800; color: var(--gold); text-align: center; letter-spacing: 0.04em; white-space: nowrap; }
+.math-ans { height: clamp(44px, 12vh, 60px); display: flex; align-items: center; justify-content: center; font-size: clamp(30px, 8vh, 44px); font-weight: 800; background: #151b27; border: 2px solid; border-color: var(--panel-lo) var(--panel-hi) var(--panel-hi) var(--panel-lo); }
+.math-ans:empty::after { content: "?"; color: #4a5670; }
+.math-ans.shake { animation: shake 0.25s; }
+@keyframes shake { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+.math-pad { flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.math-pad .btn { padding: 0; font-size: clamp(20px, 6vh, 28px); height: clamp(46px, 13vh, 64px); letter-spacing: 0; }
+.math-pad .btn.ok { background: linear-gradient(#5aa84a, #3f7f33); border-color: #8fdc7a #214a1a #214a1a #8fdc7a; color: #fff; }
+.math-pad .btn.back { background: linear-gradient(#8a3a32, #62261f); border-color: #c4766c #3a120e #3a120e #c4766c; }
+@media (orientation: portrait) { .math-panel { flex-direction: column; } }
+#math-chip { position: absolute; left: 50%; top: calc(10px + var(--sat)); transform: translateX(-50%); display: flex; align-items: center; gap: 6px; padding: 3px 10px 3px 5px; border-radius: 16px; background: rgba(14, 19, 29, 0.62); border: 2px solid rgba(255, 255, 255, 0.3); font-size: 12px; font-weight: 800; letter-spacing: 0.05em; pointer-events: none; }
+#math-chip img { width: 22px; height: 22px; image-rendering: pixelated; }
+#math-chip.locked { border-color: rgba(255, 215, 90, 0.6); }
+#boom { position: fixed; inset: 0; z-index: 5; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at center, #fff 10%, rgba(255, 220, 140, 0.85) 60%, rgba(255, 120, 40, 0.6) 100%); }
+#boom.on { animation: boom 0.6s ease-out; }
+@keyframes boom { 0% { opacity: 0.95; } 100% { opacity: 0; } }

@@ -14,12 +14,13 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="stylesheet" href="style.css?v=0cacf1353e">
+<link rel="stylesheet" href="style.css?v=21aa05d25b">
 </head>
 <body>
 <canvas id="game"></canvas>
 <div id="underwater"></div>
 <div id="hurt"></div>
+<div id="boom"></div>
 <div id="touch-layer"></div>
 
 <div id="hud" class="hidden">
@@ -27,6 +28,7 @@
   <div id="mine-bar"><i></i></div>
   <div id="toast"></div>
   <div id="debug"></div>
+  <div id="math-chip" class="hidden"><img id="chip-icon" alt=""><span id="chip-text"></span></div>
   <div id="stats">
     <div id="hearts" class="bar-row" aria-label="Health"></div>
     <div class="food-col">
@@ -92,7 +94,7 @@
     <button id="btn-play" class="btn primary">Play</button>
     <button id="btn-help" class="btn">How to play</button>
     <button id="btn-install" class="btn hidden">Install app</button>
-    <div class="ver">v0.3.0</div>
+    <div class="ver">v0.4.0</div>
   </div>
 </div>
 
@@ -153,11 +155,24 @@
           <li>Craft <b>planks</b>, <b>sticks</b>, then a <b>pickaxe</b> and <b>axe</b></li>
           <li>Stone needs a pickaxe to drop cobblestone</li>
           <li>Break <b>leaves</b> for apples, sticks and <b>saplings</b>; plant a sapling in <b>dirt</b> and it grows into a tree while you are nearby</li>
+          <li><b>Maths:</b> to mine a new kind of block, answer a sum with the number pad. Right: mine as many of that block as you like. Wrong: it becomes <b>TNT</b>, so run! Cancel keeps things as they were</li>
           <li>Eat apples with <b>Use</b>. Hunger drops as you work; sprinting needs 3 full drumsticks. Starving hurts, and if you die you drop everything</li>
         </ul>
       </div>
     </div>
     <button id="help-close" class="btn primary">Got it</button>
+  </div>
+</div>
+
+<div id="math" class="screen hidden">
+  <div class="panel math-panel">
+    <div class="math-left">
+      <div class="math-for"><img id="math-icon" alt=""><span id="math-block"></span></div>
+      <div id="math-q" class="math-q"></div>
+      <div id="math-ans" class="math-ans"></div>
+      <button id="math-cancel" class="btn">Cancel</button>
+    </div>
+    <div id="math-pad" class="math-pad"></div>
   </div>
 </div>
 
@@ -184,6 +199,7 @@
       <label>Music <output id="out-music"></output><input id="set-music" type="range" min="0" max="1" step="0.05"></label>
       <label>Sound effects <output id="out-sfx"></output><input id="set-sfx" type="range" min="0" max="1" step="0.05"></label>
       <label class="check"><input id="set-aj" type="checkbox"> Auto-jump &amp; climb out of water</label>
+      <label class="check"><input id="set-math" type="checkbox"> Maths questions (to mine a new kind of block)</label>
       <label class="check"><input id="set-debug" type="checkbox"> Show debug info</label>
     </div>
     <div class="row">
@@ -203,6 +219,6 @@
 
 <div id="fatal" class="screen hidden"><div class="panel"><h2 id="fatal-title">Something went wrong</h2><p id="fatal-msg"></p></div></div>
 <noscript><div class="screen"><div class="panel"><h2>Blocklands needs JavaScript</h2></div></div></noscript>
-<script src="game.js?v=0cacf1353e" defer></script>
+<script src="game.js?v=21aa05d25b" defer></script>
 </body>
 </html>
